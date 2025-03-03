@@ -1,5 +1,12 @@
 {% extends 'base.html.twig' %}
 
+{% block head %}
+    {{ parent() }}
+    {% if carousel|length > 0 %}
+        <link rel="preload" as="image" href="{{ asset('img/' ~ carousel[0].files[0].filename_disk) }}">
+    {% endif %}
+{% endblock %}
+
 {% block title %}Hello CarouselController!{% endblock %}
 
 {% block body %}
@@ -10,21 +17,36 @@
 		<h2 class="text-xl text-center">Ici gravitent les guitares Boissières qui ont changé d'orbite</h2>
 	</section>
 	{% for item in carousel %}
+	{% set isFirst = loop.first %}
 	<section class="flex flex-row items-center justify-between w-full">
 		<div class="flex flex-col items-center justify-center space-y-6 w-5/12">
-			<h2 class="text-4xl uppercase">{{item.title | raw}}</h2>
-			{{item.description | raw}}
+			<h2 class="text-4xl uppercase">{{ item.title | raw }}</h2>
+			{{ item.description | raw }}
 		</div>
 		<div class="flex flex-col items-center justify-center w-5/12 space-y-6">
 			
-			<img src="{{asset('img/' ~ item.files[0].filename_disk)}}" class="w-full h-[640px] object-cover">
+			<picture>
+				<source 
+					type="image/webp"
+					srcset="
+						{{ asset('img/' ~ item.files[0].filename_disk|replace({'.jpg': '-480.webp'})) }} 480w,
+						{{ asset('img/' ~ item.files[0].filename_disk|replace({'.jpg': '-800.webp'})) }} 800w,
+						{{ asset('img/' ~ item.files[0].filename_disk|replace({'.jpg': '-1200.webp'})) }} 1200w
+					"
+					sizes="(max-width: 480px) 480px, (max-width: 800px) 800px, 1200px">
+				{% if isFirst %}
+					<img src="{{ asset('img/' ~ item.files[0].filename_disk) }}" alt="{{ item.title }}" class="w-full h-auto object-cover">
+				{% else %}
+					<img loading="lazy" src="{{ asset('img/' ~ item.files[0].filename_disk) }}" alt="{{ item.title }}" class="w-full h-auto object-cover">
+				{% endif %}
+			</picture>
 
 			<div class="flex flex-row items-center justify-center space-x-6">
 				{% for file in item.files %}
 					{% if loop.index0 != 0 %}
-						<img src="{{asset('img/' ~ file.filename_disk)}}" class="w-full max-h-14 object-cover">
-					{% endif%}
-				{% endfor%}
+						<img loading="lazy" src="{{ asset('img/' ~ file.filename_disk) }}" alt="{{item.title}} little image" class="w-full max-h-14 object-cover">
+					{% endif %}
+				{% endfor %}
 			</div>
 		</div>
 	</section>

@@ -75,7 +75,7 @@ psql postgres://postgres:password@localhost/guitareboissieres -f app/var/db.sql
 
 # Step 4 : start the web server
 
-docker compose exec optimization-php php -s 0.0.0.0:8000 -t public/
+docker compose exec optimization-php php -S 0.0.0.0:8000 -t public/
 ```
 
 Your application should now be live at `http://127.0.0.1:8888/carousel`

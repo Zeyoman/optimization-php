@@ -8,38 +8,67 @@ use App\Repository\ModelesFilesRepository;
 use App\Repository\ModelesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpCache\Annotation\Cache;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class CarouselController extends AbstractController
 {
+
     #[Route('/carousel', name: 'app_carousel')]
     public function index(GalaxyRepository $galaxyRepository, ModelesRepository $modelesRepository, ModelesFilesRepository $modelesFilesRepository, DirectusFilesRepository $directusFilesRepository): Response
     {
         $galaxies = $galaxyRepository->findAll();
-        $carousel = [];
 
-        foreach($galaxies as $galaxy) {
-            $carouselItem = [
-                'title' => $galaxy->getTitle(),
-                'description' => $galaxy->getDescription(),
-            ];
-            
-            $modele = $modelesRepository->find($galaxy->getModele());
-            $modelesFiles = $modelesFilesRepository->findBy([
-                'modeles_id' => $modele->getId()
-            ]);
+        $modelIds = [];
+        foreach ($galaxies as $galaxy) {
+            $modelIds[] = $galaxy->getModele();
+        }
+        $modelIds = array_unique($modelIds);
+
+        $modelesFiles = $modelesFilesRepository->findBy([
+            'modeles_id' => $modelIds
+        ]);
+
+        $filesByModel = [];
+        $directusFileIds = [];
+        foreach ($modelesFiles as $modelesFile) {
+            $filesByModel[$modelesFile->getModelesId()][] = $modelesFile;
+            $directusFileIds[] = $modelesFile->getDirectusFilesId();
+        }
+        $directusFileIds = array_unique($directusFileIds);
+
+        $directusFiles = $directusFilesRepository->findBy([
+            'id' => $directusFileIds
+        ]);
+
+        $directusFilesById = [];
+        foreach ($directusFiles as $directusFile) {
+            $directusFilesById[$directusFile->getId()] = $directusFile;
+        }
+
+        $carousel = [];
+        foreach ($galaxies as $galaxy) {
+            $modelId = $galaxy->getModele();
             $files = [];
 
-            foreach($modelesFiles as $modelesFile) {
-                $file = $directusFilesRepository->find($modelesFile->getDirectusFilesId());
-                $files[] = $file;
+            if (isset($filesByModel[$modelId])) {
+                foreach ($filesByModel[$modelId] as $modelesFile) {
+                    $directusFileId = $modelesFile->getDirectusFilesId();
+                    if (isset($directusFilesById[$directusFileId])) {
+                        $files[] = $directusFilesById[$directusFileId];
+                    }
+                }
             }
-            $carouselItem['files'] = $files;
-            $carousel[] = $carouselItem;
+
+            $carousel[] = [
+                'title'       => $galaxy->getTitle(),
+                'description' => $galaxy->getDescription(),
+                'files'       => $files,
+            ];
         }
-        
+
         return $this->render('carousel/index.html.twig', [
-            'carousel' => $carousel
+            'carousel' => $carousel,
         ]);
     }
 }
